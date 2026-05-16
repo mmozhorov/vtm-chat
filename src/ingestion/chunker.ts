@@ -13,7 +13,6 @@ export async function chunkDocuments(docs: Document[]): Promise<Document[]> {
   return chunks.map((chunk, i) => ({
     ...chunk,
     metadata: {
-      ...chunk.metadata,
       chunk_id: `chunk_${i}`,
       source_page: chunk.metadata.loc?.pageNumber ?? 0,
       chunk_type: 'lore' as const,
