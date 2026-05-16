@@ -13,7 +13,7 @@ export async function readJSONFromDrive<T>(
   fileName: string,
 ): Promise<T | null> {
   const res = await drive.files.list({
-    q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+    q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId.replace(/'/g, "\\'")}' in parents and trashed=false`,
     fields: 'files(id)',
   })
   const file = res.data.files?.[0]
@@ -36,7 +36,7 @@ export async function writeJSONToDrive(
   data: unknown,
 ): Promise<void> {
   const res = await drive.files.list({
-    q: `name='${fileName}' and '${folderId}' in parents and trashed=false`,
+    q: `name='${fileName.replace(/'/g, "\\'")}' and '${folderId.replace(/'/g, "\\'")}' in parents and trashed=false`,
     fields: 'files(id)',
   })
   const file = res.data.files?.[0]
@@ -59,11 +59,21 @@ export async function createDriveClient(): Promise<DriveClient> {
   const credPath = process.env.GOOGLE_CREDENTIALS_PATH ?? './data/google-credentials.json'
   const tokenPath = process.env.GOOGLE_TOKEN_PATH ?? './data/google-token.json'
 
-  const credentials = JSON.parse(fs.readFileSync(credPath, 'utf-8'))
+  let credentials: { installed: { client_id: string; client_secret: string } }
+  try {
+    credentials = JSON.parse(fs.readFileSync(credPath, 'utf-8'))
+  } catch (err) {
+    throw new Error(`Failed to load credentials from ${credPath}: ${err instanceof Error ? err.message : String(err)}`)
+  }
   const { client_id, client_secret } = credentials.installed
   const oauth2Client = new google.auth.OAuth2(client_id, client_secret, 'urn:ietf:wg:oauth:2.0:oob')
 
-  const token = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'))
+  let token: object
+  try {
+    token = JSON.parse(fs.readFileSync(tokenPath, 'utf-8'))
+  } catch (err) {
+    throw new Error(`Failed to load token from ${tokenPath}: ${err instanceof Error ? err.message : String(err)}`)
+  }
   oauth2Client.setCredentials(token)
 
   const drive = google.drive({ version: 'v3', auth: oauth2Client })
