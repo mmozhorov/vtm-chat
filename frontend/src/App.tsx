@@ -19,7 +19,6 @@ body { background: #0d0d0d; color: #c8a96e; font-family: Georgia, serif; height:
 .message.user .message-icon { color: #555; }
 .message.assistant .message-icon { color: #8b0000; }
 .message-content { white-space: pre-wrap; line-height: 1.7; flex: 1; }
-.message.user .message-content { color: #888; }
 .message.assistant .message-content { color: #c8a96e; }
 .choices { padding: 8px 20px 12px; display: flex; flex-wrap: wrap; gap: 8px; border-top: 1px solid #1a0000; }
 .choices button { background: #110000; border: 1px solid #8b0000; color: #c8a96e; padding: 8px 16px; cursor: pointer; font-family: Georgia, serif; font-size: 0.9rem; transition: background 0.2s; }
@@ -32,6 +31,7 @@ body { background: #0d0d0d; color: #c8a96e; font-family: Georgia, serif; height:
 .input-form button:disabled { opacity: 0.35; cursor: not-allowed; }
 .start-screen input { background: #0f0f0f; border: 1px solid #333; color: #c8a96e; padding: 10px 16px; font-family: Georgia, serif; font-size: 1rem; width: 260px; text-align: center; }
 .start-screen button { background: #8b0000; border: 1px solid #8b0000; color: #c8a96e; padding: 10px 28px; cursor: pointer; font-family: Georgia, serif; font-size: 1rem; letter-spacing: 1px; }
+.message.user .message-content { color: #7a9e7e; font-style: italic; border-left: 2px solid #2a4a2e; padding-left: 10px; }
 @keyframes blink { 0%, 80%, 100% { opacity: 0.15 } 40% { opacity: 1 } }
 .dots { display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
 .dots span { width: 7px; height: 7px; background: #8b0000; border-radius: 50%; animation: blink 1.4s ease-in-out infinite; }
@@ -191,7 +191,7 @@ export default function App() {
         {choices.length > 0 && !streaming && (
           <div className="choices">
             {choices.map(c => (
-              <button key={c.id} onClick={() => void streamChat(String(c.index))}>
+              <button key={c.id} onClick={() => void streamChat(`${c.index}. ${c.text}`)}>
                 {c.index}. {c.text}
               </button>
             ))}
