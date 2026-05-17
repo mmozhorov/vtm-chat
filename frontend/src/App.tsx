@@ -32,6 +32,12 @@ body { background: #0d0d0d; color: #c8a96e; font-family: Georgia, serif; height:
 .input-form button:disabled { opacity: 0.35; cursor: not-allowed; }
 .start-screen input { background: #0f0f0f; border: 1px solid #333; color: #c8a96e; padding: 10px 16px; font-family: Georgia, serif; font-size: 1rem; width: 260px; text-align: center; }
 .start-screen button { background: #8b0000; border: 1px solid #8b0000; color: #c8a96e; padding: 10px 28px; cursor: pointer; font-family: Georgia, serif; font-size: 1rem; letter-spacing: 1px; }
+@keyframes blink { 0%, 80%, 100% { opacity: 0.15 } 40% { opacity: 1 } }
+.dots { display: inline-flex; gap: 6px; align-items: center; padding: 6px 0; }
+.dots span { width: 7px; height: 7px; background: #8b0000; border-radius: 50%; animation: blink 1.4s ease-in-out infinite; }
+.dots span:nth-child(2) { animation-delay: 0.2s; }
+.dots span:nth-child(3) { animation-delay: 0.4s; }
+.thinking-label { color: #444; font-size: 0.85rem; font-style: italic; margin-left: 8px; }
 `
 
 export default function App() {
@@ -135,7 +141,9 @@ export default function App() {
     return (
       <>
         <style>{css}</style>
-        <div className="start-screen"><p>...</p></div>
+        <div className="start-screen">
+          <div className="dots"><span /><span /><span /></div>
+        </div>
       </>
     )
   }
@@ -167,7 +175,14 @@ export default function App() {
           {messages.map((m, i) => (
             <div key={i} className={`message ${m.role}`}>
               <span className="message-icon">{m.role === 'user' ? '▶' : '◆'}</span>
-              <span className="message-content">{m.content}</span>
+              {m.role === 'assistant' && m.content === '' && streaming && i === messages.length - 1 ? (
+                <span className="message-content">
+                  <span className="dots"><span /><span /><span /></span>
+                  <span className="thinking-label">рассказчик думает...</span>
+                </span>
+              ) : (
+                <span className="message-content">{m.content}</span>
+              )}
             </div>
           ))}
           <div ref={bottomRef} />
