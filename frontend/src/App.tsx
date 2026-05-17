@@ -41,7 +41,29 @@ export default function App() {
   const [streaming, setStreaming] = useState(false)
   const [playerName, setPlayerName] = useState('')
   const [sessionStarted, setSessionStarted] = useState(false)
+  const [loading, setLoading] = useState(true)
   const bottomRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    fetch('/api/session')
+      .then(r => r.json())
+      .then(async ({ session }) => {
+        if (session) {
+          setMessages(
+            (session.history as { role: 'user' | 'assistant'; content: string }[]).map(h => ({
+              role: h.role,
+              content: h.content,
+            }))
+          )
+          setPlayerName(session.player_name as string)
+          setSessionStarted(true)
+          const choicesRes = await fetch('/api/choices')
+          const { choices: current } = await choicesRes.json() as { choices: Choice[] }
+          setChoices(current ?? [])
+        }
+      })
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -107,6 +129,15 @@ export default function App() {
     const msg = input.trim()
     setInput('')
     void streamChat(msg)
+  }
+
+  if (loading) {
+    return (
+      <>
+        <style>{css}</style>
+        <div className="start-screen"><p>...</p></div>
+      </>
+    )
   }
 
   if (!sessionStarted) {
