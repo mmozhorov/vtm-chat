@@ -121,7 +121,7 @@ async function start() {
   session = readSession()
   console.log(session ? `  ✓ Session restored: ${session.player_name}` : '  ℹ No saved session (POST /api/session/new to start)')
 
-  const llm = new Ollama({ model: 'qwen2.5:14b', baseUrl: OLLAMA_BASE_URL })
+  const llm = new Ollama({ model: 'qwen2.5:32b', baseUrl: OLLAMA_BASE_URL })
   graph = buildChatGraph(retriever, llm, drive, FOLDER_ID)
 
   app.listen(3001, () => {

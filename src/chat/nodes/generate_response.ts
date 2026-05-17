@@ -1,7 +1,23 @@
 import type { BaseLLM } from '@langchain/core/language_models/llms'
 import type { ChatStateType } from '../types.js'
 
-const SYSTEM_PROMPT = 'Ты — рассказчик в мире Vampire: the Masquerade. Стиль: мрачный готический нуар, атмосфера опасности и интриг. Язык: русский. Не выходи за рамки лора книги. В конце сцены с выборами — предложи варианты нумерованным списком.'
+const SYSTEM_PROMPT = `Ты — рассказчик в мире Vampire: the Masquerade.
+Сеттинг: Чикаго, 1990-е. Ночной город, политика кланов, Маскарад.
+Стиль: мрачный готический нуар, атмосфера опасности и интриг.
+ЯЗЫК ОТВЕТА: ТОЛЬКО РУССКИЙ. Никогда не используй другие языки, даже если получаешь цифры или короткие сообщения.
+Строго придерживайся лора и сеттинга. Не выдумывай локации — используй только те, что описаны в сцене.
+ВАЖНО: никогда не перечисляй варианты выбора в тексте — они будут показаны отдельно как кнопки. Заканчивай ответ последним предложением нарратива, без списков.`
+
+const MAX_HISTORY = 6
+
+function formatHistory(history: { role: 'user' | 'assistant'; content: string }[]): string {
+  const recent = history.slice(-MAX_HISTORY)
+  if (recent.length === 0) return ''
+  return (
+    '\n\nИстория диалога:\n' +
+    recent.map(h => `${h.role === 'user' ? 'Игрок' : 'Рассказчик'}: ${h.content}`).join('\n')
+  )
+}
 
 export async function generateResponseNode(
   state: ChatStateType,
@@ -9,17 +25,45 @@ export async function generateResponseNode(
 ): Promise<Partial<ChatStateType>> {
   const currentNode = state.nodes.find(n => n.id === state.session.current_node_id)
   const currentEdges = state.edges.filter(e => e.from_node_id === state.session.current_node_id)
+  const history = formatHistory(state.session.history)
+
+  const choicesText =
+    currentEdges.length > 0
+      ? '\n\n[Контекст для рассказчика — доступные выборы, НЕ перечислять в ответе]: ' +
+        currentEdges.map((e, i) => `${i + 1}. ${e.choice_text}`).join(', ')
+      : ''
 
   let content: string
+
   if (state.intent === 'lore_question') {
-    content = `${SYSTEM_PROMPT}\n\nВопрос игрока: ${state.message}\n\nИнформация из лора:\n${state.ragContext}\n\nОтветь кратко, в стиле рассказчика.`
+    content = `${SYSTEM_PROMPT}${history}\n\nВопрос игрока: ${state.message}\n\nИнформация из лора:\n${state.ragContext}\n\nОтветь кратко, в стиле рассказчика.`
+  } else if (state.intent === 'make_choice') {
+    const visited = state.session.visited_nodes
+    const prevNodeId = visited.length >= 2 ? visited[visited.length - 2] : null
+    const prevNode = prevNodeId ? state.nodes.find(n => n.id === prevNodeId) : null
+    const chosenEdge = prevNodeId
+      ? state.edges.find(e => e.from_node_id === prevNodeId && e.to_node_id === state.session.current_node_id)
+      : null
+
+    if (chosenEdge && prevNode) {
+      const prevDesc = prevNode.description_template ?? ''
+      const newDesc = currentNode?.description_template ?? 'Незнакомое место.'
+      content = `${SYSTEM_PROMPT}${history}
+
+Игрок выбрал: "${chosenEdge.choice_text}"
+
+Предыдущая сцена: ${prevDesc}
+
+Новая сцена: ${newDesc}
+
+Опиши путь от предыдущей сцены к новой — что происходит по дороге, детали, ощущения. Не пропускай переход. Затем опиши новую сцену.${choicesText}`
+    } else {
+      const sceneDesc = currentNode?.description_template ?? 'Вы в незнакомом месте.'
+      content = `${SYSTEM_PROMPT}${history}\n\nТекущая сцена: ${sceneDesc}\n\nИгрок: ${state.message}${choicesText}`
+    }
   } else {
     const sceneDesc = currentNode?.description_template ?? 'Вы в незнакомом месте.'
-    const choicesText =
-      currentEdges.length > 0
-        ? '\n\nДоступные варианты:\n' + currentEdges.map((e, i) => `${i + 1}. ${e.choice_text}`).join('\n')
-        : ''
-    content = `${SYSTEM_PROMPT}\n\nТекущая сцена: ${sceneDesc}\n\nИгрок: ${state.message}${choicesText}`
+    content = `${SYSTEM_PROMPT}${history}\n\nТекущая сцена: ${sceneDesc}\n\nИгрок: ${state.message}${choicesText}`
   }
 
   const response = String(await llm.invoke(content as never))
