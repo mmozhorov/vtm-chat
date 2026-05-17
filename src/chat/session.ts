@@ -1,4 +1,4 @@
-import fs from 'fs'
+import * as fs from 'fs'
 import { randomUUID } from 'crypto'
 import type { Session } from './types.js'
 
