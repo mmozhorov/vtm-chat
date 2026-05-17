@@ -264,7 +264,7 @@ export default function App() {
           <div className="choices">
             {choices.map(c => (
               <button key={c.id} onClick={() => void streamChat(`${c.index}. ${c.text}`)}>
-                {c.index}. {c.text}
+                {c.text}
               </button>
             ))}
           </div>
