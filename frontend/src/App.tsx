@@ -88,24 +88,28 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    fetch('/api/session')
-      .then(r => r.json())
-      .then(async ({ session }) => {
-        if (session) {
-          setMessages(
-            (session.history as { role: 'user' | 'assistant'; content: string }[]).map(h => ({
-              role: h.role,
-              content: h.content,
-            }))
-          )
-          setPlayerName(session.player_name as string)
-          setSessionStarted(true)
-          const choicesRes = await fetch('/api/choices')
-          const { choices: current } = await choicesRes.json() as { choices: Choice[] }
-          setChoices(current ?? [])
+    const fetchSession = async () => {
+      for (let attempt = 0; attempt < 6; attempt++) {
+        try {
+          const r = await fetch('/api/session')
+          const { session } = await r.json() as { session: { history: { role: 'user' | 'assistant'; content: string }[]; player_name: string } | null }
+          if (session) {
+            setMessages(session.history.map(h => ({ role: h.role, content: h.content })))
+            setPlayerName(session.player_name)
+            setSessionStarted(true)
+            const choicesRes = await fetch('/api/choices')
+            const { choices: current } = await choicesRes.json() as { choices: Choice[] }
+            setChoices(current ?? [])
+          }
+          setLoading(false)
+          return
+        } catch {
+          if (attempt < 5) await new Promise(res => setTimeout(res, 500 * (attempt + 1)))
         }
-      })
-      .finally(() => setLoading(false))
+      }
+      setLoading(false)
+    }
+    void fetchSession()
   }, [])
 
   useEffect(() => {
